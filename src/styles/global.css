@@ -1,0 +1,79 @@
+:root, [data-theme="dark"] {
+  --color-bg: #0f1117;
+  --color-bg-elevated: #181a22;
+  --color-bg-surface: #1e2028;
+  --color-bg-hover: #262830;
+  --color-border: #2a2d38;
+  --color-border-subtle: #22242e;
+  --color-text: #e4e6ed;
+  --color-text-secondary: #8b8fa3;
+  --color-text-muted: #5c6070;
+  --color-accent: #4e8fff;
+  --color-accent-hover: #6ba1ff;
+  --color-accent-subtle: rgba(78, 143, 255, 0.12);
+  --color-warning: #f0a840;
+  --color-danger: #e85454;
+  --color-danger-subtle: rgba(232, 84, 84, 0.12);
+  --color-success: #3ec97a;
+  --color-staff: #ffffff;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Cascadia Code", "Fira Code", monospace;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
+}
+
+[data-theme="light"] {
+  --color-bg: #f5f6f8;
+  --color-bg-elevated: #ffffff;
+  --color-bg-surface: #f0f1f3;
+  --color-bg-hover: #e8e9ec;
+  --color-border: #d1d3d9;
+  --color-border-subtle: #e0e1e5;
+  --color-text: #1a1c22;
+  --color-text-secondary: #555968;
+  --color-text-muted: #888c9a;
+  --color-accent: #3b7ade;
+  --color-accent-hover: #2b6acc;
+  --color-accent-subtle: rgba(59, 122, 222, 0.1);
+  --color-warning: #d4922e;
+  --color-danger: #d04040;
+  --color-danger-subtle: rgba(208, 64, 64, 0.08);
+  --color-success: #2ea85e;
+  --color-staff: #555968;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, textarea {
+  font-family: inherit; font-size: inherit; color: var(--color-text);
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm); padding: 6px 10px; outline: none;
+}
+input:focus, textarea:focus { border-color: var(--color-accent); }
+
+.react-flow__node { transition: transform 300ms ease; }
+.react-flow__node.dragging { transition: none !important; }

@@ -1,0 +1,84 @@
+.org-node-wrapper { padding: 12px; margin: -12px; position: relative; }
+
+.org-node {
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); padding: 8px 14px; width: 180px;
+  text-align: center; cursor: grab;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+    transform var(--transition-fast), opacity var(--transition-fast);
+  position: relative; word-wrap: break-word; overflow-wrap: break-word;
+}
+.dragging .org-node {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(78,143,255,0.3), 0 0 0 2px var(--color-accent);
+  border-color: var(--color-accent); transform: scale(1.05); z-index: 100; opacity: 0.9;
+}
+.org-node-wrapper:hover .org-node, .org-node:hover { border-color: var(--color-accent); }
+.org-node.selected { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent-subtle); }
+.org-node.staff { border-color: var(--color-staff); border-width: 1px; }
+
+.org-node__name { font-weight: 600; font-size: 13px; color: var(--color-text); }
+.org-node__name--fallback { font-style: italic; color: var(--color-text-secondary); }
+.org-node__person { font-size: 11px; color: var(--color-accent); font-weight: 500; margin-top: 2px; }
+.org-node__desc { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+.org-node__count { font-size: 10px; color: var(--color-text-muted); margin-top: 2px; }
+
+.org-node__staff-badge {
+  position: absolute; top: -8px; right: -8px; font-size: 9px; font-weight: 700;
+  padding: 1px 6px; border-radius: 8px;
+  background: rgba(255,255,255,0.15); color: var(--color-staff);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+.org-node__tag {
+  display: inline-block; font-size: 8px; font-weight: 700; padding: 0 5px;
+  border-radius: 6px; margin: 1px 2px; text-transform: uppercase; letter-spacing: 0.03em;
+}
+
+/* Hover buttons */
+.org-node__hover-btns {
+  position: absolute; opacity: 0; transition: opacity var(--transition-fast);
+  pointer-events: none; z-index: 10;
+}
+.org-node-wrapper:hover .org-node__hover-btns { opacity: 1; pointer-events: all; }
+.org-node__hover-btn {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--color-accent); color: #fff; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: 2px solid var(--color-bg-surface); line-height: 1;
+}
+.org-node__hover-btn:hover { background: var(--color-accent-hover); }
+.org-node__hover-btns--top { top: -10px; left: 50%; transform: translateX(-50%); }
+.org-node__hover-btns--bottom { bottom: -10px; left: 50%; transform: translateX(-50%); }
+.org-node__hover-btns--right { right: -10px; top: 50%; transform: translateY(-50%); }
+
+.org-node__rename-input {
+  background: var(--color-bg); border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm); padding: 2px 6px; font-size: 13px;
+  font-weight: 600; color: var(--color-text); text-align: center; width: 100%; outline: none;
+}
+
+.org-node__collapse-badge {
+  margin-top: 4px; font-size: 10px; font-weight: 600; color: var(--color-accent);
+  background: var(--color-accent-subtle); padding: 1px 8px; border-radius: 8px; display: inline-block;
+}
+
+.org-node__status { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.org-node__status--missing { background: var(--color-danger); }
+.org-node__status--outdated { background: var(--color-warning); }
+
+/* Context menu */
+.context-menu {
+  position: fixed; background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); padding: 4px 0; min-width: 180px;
+  box-shadow: var(--shadow-lg); z-index: 1000;
+}
+.context-menu__item {
+  display: block; width: 100%; padding: 8px 14px; font-size: 13px; text-align: left;
+  color: var(--color-text); background: none; border: none; cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.context-menu__item:hover { background: var(--color-bg-hover); }
+.context-menu__item--danger { color: var(--color-danger); }
+.context-menu__item--danger:hover { background: var(--color-danger-subtle); }
+.context-menu__separator { height: 1px; background: var(--color-border); margin: 4px 0; }
