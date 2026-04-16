@@ -44,7 +44,7 @@ export async function exportPdf(filename: string = "orgchart.pdf"): Promise<void
   const bg = isDark ? "#0f1117" : "#f5f6f8";
 
   const dataUrl = await toPng(viewport, {
-    backgroundColor: bg,
+    backgroundColor: "transparent",
     pixelRatio: 2,
     filter: exportFilter,
   });

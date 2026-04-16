@@ -113,7 +113,15 @@ export function computeLayout(
     g.setDefaultEdgeLabel(() => ({}));
     for (const id of allIds) g.setNode(id, { width: NODE_WIDTH, height: getHeight(id) });
 
-    const childrenByParent = new Map<string, OrgNode[]>();
+const childrenByParent = new Map<string, OrgNode[]>();
+    // The top-level childNodes are all siblings (passed together as a group)
+    const rootGroupKey = "__rootGroup__";
+    for (const child of childNodes) {
+      const list = childrenByParent.get(rootGroupKey) ?? [];
+      list.push(child);
+      childrenByParent.set(rootGroupKey, list);
+    }
+    // Inner parent-child relationships
     for (const id of allIds) {
       const node = nodeMap.get(id)!;
       if (node.parentId && idSet.has(node.parentId)) {
@@ -123,6 +131,7 @@ export function computeLayout(
       }
     }
     for (const [pid, children] of childrenByParent) {
+      if (pid === "__rootGroup__") continue;
       const sorted = [
         ...children.filter((n) => n.isStaff).sort((a, b) => a.order - b.order),
         ...children.filter((n) => !n.isStaff).sort((a, b) => a.order - b.order),
@@ -171,7 +180,23 @@ export function computeLayout(
         }
       }
     }
-
+// Align siblings on the same Y (top)
+    for (const [, children] of childrenByParent) {
+      if (children.length <= 1) continue;
+      const sibPositions = children.map((c) => posById.get(c.id)).filter(Boolean) as LayoutPosition[];
+      if (sibPositions.length === 0) continue;
+      const topY = Math.min(...sibPositions.map((p) => p.y));
+      for (const sibPos of sibPositions) {
+        const dy = topY - sibPos.y;
+        if (dy !== 0) {
+          sibPos.y = topY;
+          for (const d of getDescIds(sibPos.id)) {
+            const dp = posById.get(d);
+            if (dp) dp.y += dy;
+          }
+        }
+      }
+    }
     // Handle vertical sub-groups within horizontal tree
     const verticalAttachments: LayoutPosition[] = [];
     for (const id of allIds) {
