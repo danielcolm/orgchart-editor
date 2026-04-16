@@ -28,6 +28,8 @@ function CanvasInner() {
   const hideContextMenu = useStore((s) => s.hideContextMenu);
   const collapsedNodes = useStore((s) => s.collapsedNodes);
   const focusNodeId = useStore((s) => s.focusNodeId);
+  const focusWithParents = useStore((s) => s.focusWithParents);
+  const collapseAfterLevel = useStore((s) => s.collapseAfterLevel);
   const takeSnapshot = useStore((s) => s.takeSnapshot);
   const showNames = useStore((s) => s.showNames);
 
@@ -38,11 +40,15 @@ function CanvasInner() {
   const dominantLang = settings.dominantLanguage;
 
   const visibleNodes = useMemo(
-    () => getVisibleNodes(allNodes, collapsedNodes, focusNodeId),
-    [allNodes, collapsedNodes, focusNodeId]
+    () => getVisibleNodes(allNodes, collapsedNodes, focusNodeId, focusWithParents, collapseAfterLevel),
+    [allNodes, collapsedNodes, focusNodeId, focusWithParents, collapseAfterLevel]
   );
 
   const layoutResult = useMemo(() => computeLayout(visibleNodes), [visibleNodes]);
+  const layoutMap = useMemo(
+    () => new Map(layoutResult.positions.map((p) => [p.id, p])),
+    [layoutResult]
+  );
   const posMap = useMemo(
     () => new Map(layoutResult.positions.map((p) => [p.id, { x: p.x, y: p.y }])),
     [layoutResult]
@@ -82,6 +88,8 @@ function CanvasInner() {
         isSelected: selectedNodeId === node.id,
         nodeId: node.id, translationStatus: status,
         isCollapsed, hiddenCount, tagColors,
+        isVertical: layoutMap.get(node.id)?.isVertical ?? false,
+        nodeWidth: layoutMap.get(node.id)?.width ?? 180,
       };
 
       return {
@@ -89,16 +97,24 @@ function CanvasInner() {
         draggable: true, className: draggingId === node.id ? "dragging" : "",
       };
     });
-  }, [visibleNodes, allNodes, people, settings, activeLanguage, dominantLang, selectedNodeId, posMap, draggingId, dragPositions, collapsedNodes, showNames]);
+  }, [visibleNodes, allNodes, people, settings, activeLanguage, dominantLang, selectedNodeId, posMap, layoutMap, draggingId, dragPositions, collapsedNodes, showNames]);
 
   const rfEdges: Edge[] = useMemo(() => {
     const visibleIds = new Set(visibleNodes.map((n) => n.id));
     const parentEdges: Edge[] = visibleNodes
       .filter((n) => n.parentId && visibleIds.has(n.parentId))
-      .map((n) => ({
-        id: `e-${n.parentId}-${n.id}`, source: n.parentId!, target: n.id,
-        type: "smoothstep", style: { stroke: "var(--color-border)" },
-      }));
+      .map((n) => {
+        const isVertical = layoutMap.get(n.id)?.isVertical ?? false;
+        return {
+          id: `e-${n.parentId}-${n.id}`,
+          source: n.parentId!,
+          target: n.id,
+          sourceHandle: isVertical ? "right" : undefined,
+          targetHandle: isVertical ? "left" : undefined,
+          type: "smoothstep",
+          style: { stroke: "var(--color-border)" },
+        };
+      });
     const relationEdges: Edge[] = relations
       .filter((r) => visibleIds.has(r.sourceId) && visibleIds.has(r.targetId))
       .map((r) => ({
@@ -108,7 +124,7 @@ function CanvasInner() {
         markerEnd: { type: MarkerType.ArrowClosed, color: "var(--color-border)" },
       }));
     return [...parentEdges, ...relationEdges];
-  }, [visibleNodes, relations]);
+  }, [visibleNodes, relations, layoutMap]);
 
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
     for (const change of changes) {

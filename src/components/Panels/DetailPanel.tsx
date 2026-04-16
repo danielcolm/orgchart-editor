@@ -228,9 +228,81 @@ export function DetailPanel() {
         <textarea value={noteValue} onChange={(e) => setNoteValue(e.target.value)}
           onBlur={updateNote} style={S.textarea} rows={3} />
       </div>
+
+      {/* Children reorder */}
+      <ChildrenReorder nodeId={node.id} />
     </div>
   );
 }
+
+function ChildrenReorder({ nodeId }: { nodeId: string }) {
+  const nodes = useStore((s) => s.nodes);
+  const setNodes = useStore((s) => s.setNodes);
+  const syncNodes = useStore((s) => s.syncNodes);
+  const activeLanguage = useStore((s) => s.activeLanguage);
+  const settings = useStore((s) => s.settings);
+  const takeSnapshot = useStore((s) => s.takeSnapshot);
+
+  const staffChildren = nodes.filter((n) => n.parentId === nodeId && n.isStaff).sort((a, b) => a.order - b.order);
+  const regularChildren = nodes.filter((n) => n.parentId === nodeId && !n.isStaff).sort((a, b) => a.order - b.order);
+
+  function getName(n: typeof nodes[0]): string {
+    return n.translations[activeLanguage]?.name ?? n.translations[settings.dominantLanguage]?.name ?? n.id;
+  }
+
+  function move(list: typeof nodes, index: number, direction: -1 | 1) {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= list.length) return;
+    takeSnapshot("Reorder children");
+    const reordered = [...list];
+    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+    const updated = nodes.map((n) => {
+      const idx = reordered.findIndex((r) => r.id === n.id);
+      return idx >= 0 ? { ...n, order: idx } : n;
+    });
+    setNodes(updated);
+    syncNodes();
+  }
+
+  if (staffChildren.length === 0 && regularChildren.length === 0) return null;
+
+  return (
+    <>
+      {staffChildren.length > 0 && (
+        <div style={reorderStyles.section}>
+          <div style={reorderStyles.title}>Staff Children Order</div>
+          {staffChildren.map((c, i) => (
+            <div key={c.id} style={reorderStyles.row}>
+              <span style={reorderStyles.name}>{getName(c)}</span>
+              <button onClick={() => move(staffChildren, i, -1)} disabled={i === 0} style={reorderStyles.btn}>↑</button>
+              <button onClick={() => move(staffChildren, i, 1)} disabled={i === staffChildren.length - 1} style={reorderStyles.btn}>↓</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {regularChildren.length > 0 && (
+        <div style={reorderStyles.section}>
+          <div style={reorderStyles.title}>Children Order</div>
+          {regularChildren.map((c, i) => (
+            <div key={c.id} style={reorderStyles.row}>
+              <span style={reorderStyles.name}>{getName(c)}</span>
+              <button onClick={() => move(regularChildren, i, -1)} disabled={i === 0} style={reorderStyles.btn}>↑</button>
+              <button onClick={() => move(regularChildren, i, 1)} disabled={i === regularChildren.length - 1} style={reorderStyles.btn}>↓</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+const reorderStyles: Record<string, React.CSSProperties> = {
+  section: { marginBottom: 14 },
+  title: { fontSize: 11, fontWeight: 600, color: "var(--color-text-muted)", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.04em" },
+  row: { display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: "var(--radius-sm)", background: "var(--color-bg-surface)", marginBottom: 3 },
+  name: { flex: 1, fontSize: 12, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
+  btn: { width: 22, height: 22, borderRadius: 4, background: "var(--color-bg)", border: "1px solid var(--color-border)", fontSize: 11, color: "var(--color-text-secondary)", cursor: "pointer" },
+};
 
 const S: Record<string, React.CSSProperties> = {
   panel: { width: 320, height: "100%", overflow: "auto", borderLeft: "1px solid var(--color-border-subtle)", background: "var(--color-bg-elevated)", padding: 16, flexShrink: 0 },

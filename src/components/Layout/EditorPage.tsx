@@ -4,6 +4,7 @@ import { Canvas } from "@/components/Canvas/Canvas";
 import { PeopleView } from "@/components/Panels/PeopleView";
 import { DetailPanel } from "@/components/Panels/DetailPanel";
 import { HistoryView } from "@/components/Panels/HistoryView";
+import { SettingsView } from "@/components/Panels/SettingsView";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +25,7 @@ export function EditorPage() {
       case "graph": return <Canvas />;
       case "people": return <PeopleView />;
       case "history": return <HistoryView />;
+      case "settings": return <SettingsView />;
     }
   }
 

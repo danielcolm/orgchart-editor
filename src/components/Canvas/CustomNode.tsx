@@ -15,6 +15,8 @@ export interface OrgNodeData {
   isCollapsed: boolean;
   hiddenCount: number;
   tagColors: string[];
+  isVertical: boolean;
+  nodeWidth: number;
   [key: string]: unknown;
 }
 
@@ -100,20 +102,60 @@ function OrgNodeComponent({ data }: NodeProps) {
     syncNodes();
   }, [nodes, d.nodeId, activeLanguage, settings, setNodes, syncNodes, takeSnapshot]);
 
+  const handleAddSibling = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentNode = nodes.find((n) => n.id === d.nodeId);
+    if (!currentNode || !currentNode.parentId) return;
+    const name = prompt("Node name:");
+    if (!name?.trim()) return;
+    takeSnapshot("Add sibling");
+    const now = Date.now();
+    const translations: Record<string, unknown> = {};
+    for (const lang of settings.languages) {
+      translations[lang.code] = {
+        name: name.trim(), description: "", mandate: "", responsibility: "",
+        authority: "", tasks: "", kpi: "",
+        updatedAt: lang.code === activeLanguage ? now : now - 1,
+      };
+    }
+    const siblings = nodes.filter((n) => n.parentId === currentNode.parentId && !n.isStaff);
+    const newNode = {
+      id: crypto.randomUUID(),
+      projectId: nodes[0]?.projectId ?? "",
+      parentId: currentNode.parentId,
+      isStaff: false,
+      order: siblings.length,
+      staffLayout: "horizontal" as const,
+      childrenLayout: "horizontal" as const,
+      assignedPeople: [],
+      tags: [],
+      note: "",
+      translations: translations as any,
+    };
+    setNodes([...nodes, newNode]);
+    syncNodes();
+  }, [nodes, d.nodeId, activeLanguage, settings, setNodes, syncNodes, takeSnapshot]);
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     showContextMenu(e.clientX, e.clientY, d.nodeId);
   }, [d.nodeId, showContextMenu]);
 
-  const classes = ["org-node", d.isSelected ? "selected" : "", d.isStaff ? "staff" : ""].filter(Boolean).join(" ");
+  const classes = ["org-node", d.isSelected ? "selected" : "", d.isStaff ? "staff" : "", d.isVertical ? "vertical" : ""].filter(Boolean).join(" ");
   const countLabel = d.peopleCount > 1 ? ` (${d.peopleCount})` : "";
+
+  // Check if this node has a parent (for showing "add sibling" button)
+  const currentNode = nodes.find((n) => n.id === d.nodeId);
+  const hasParent = !!currentNode?.parentId;
 
   return (
     <div className="org-node-wrapper">
-      <div className={classes} onDoubleClick={(e) => { e.stopPropagation(); setEditingNodeId(d.nodeId); }} onContextMenu={handleContextMenu}>
+      <div className={classes} style={{ width: d.nodeWidth }} onDoubleClick={(e) => { e.stopPropagation(); setEditingNodeId(d.nodeId); }} onContextMenu={handleContextMenu}>
         <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+        {d.isVertical && <Handle type="target" position={Position.Left} id="left" style={{ opacity: 0 }} />}
         <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+        <Handle type="source" position={Position.Right} id="right" style={{ opacity: 0 }} />
 
         {d.isStaff && <div className="org-node__staff-badge">Staff</div>}
 
@@ -160,9 +202,11 @@ function OrgNodeComponent({ data }: NodeProps) {
 
       {!isEditing && (
         <>
-          <div className="org-node__hover-btns org-node__hover-btns--top">
-            <button className="org-node__hover-btn" onClick={(e) => { e.stopPropagation(); /* add parent via context menu */ }} title="Add parent">↑</button>
-          </div>
+          {hasParent && (
+            <div className="org-node__hover-btns org-node__hover-btns--right">
+              <button className="org-node__hover-btn" onClick={handleAddSibling} title="Add sibling">+</button>
+            </div>
+          )}
           <div className="org-node__hover-btns org-node__hover-btns--bottom">
             <button className="org-node__hover-btn" onClick={handleAddChild} title="Add child">+</button>
           </div>

@@ -40,6 +40,8 @@ export function NodeContextMenu() {
 
   const isRoot = node.parentId === null;
   const hasChildren = nodes.some((n) => n.parentId === ctx.nodeId);
+  const hasStaffChildren = nodes.some((n) => n.parentId === ctx.nodeId && n.isStaff);
+  const hasRegularChildren = nodes.some((n) => n.parentId === ctx.nodeId && !n.isStaff);
   const nodeRelations = relations.filter((r) => r.sourceId === ctx.nodeId || r.targetId === ctx.nodeId);
 
   return (
@@ -107,21 +109,31 @@ export function NodeContextMenu() {
       {hasChildren && <button className="context-menu__item" onClick={() => act(() => toggleCollapse(ctx.nodeId!))}>
         {collapsedNodes.has(ctx.nodeId!) ? "Expand children" : "Collapse children"}
       </button>}
-      <button className="context-menu__item" onClick={() => act(() => setFocus(ctx.nodeId!))}>Focus on this node</button>
-      <button className="context-menu__item" onClick={() => {
-        // Focus with parents — store focusNodeId and a flag
-        // For simplicity, we use a special prefix
-        act(() => {
-          // We'll handle this by setting focus and keeping parents visible
-          // The visibility service already supports focusWithParents
-          useStore.setState({ focusNodeId: ctx.nodeId! });
-          // Store a flag in localStorage for "with parents" mode
-          localStorage.setItem("orgchart-focus-with-parents", "true");
-        });
-      }}>Focus with parents</button>
-      {focusNodeId && <button className="context-menu__item" onClick={() => act(() => { resetView(); localStorage.removeItem("orgchart-focus-with-parents"); })}>
+      <button className="context-menu__item" onClick={() => act(() => setFocus(ctx.nodeId!, false))}>Focus on this node</button>
+      <button className="context-menu__item" onClick={() => act(() => setFocus(ctx.nodeId!, true))}>Focus with parents</button>
+      {focusNodeId && <button className="context-menu__item" onClick={() => act(() => resetView())}>
         Reset view (show all)
       </button>}
+
+      {/* Layout toggles */}
+      {hasStaffChildren && (
+        <button className="context-menu__item" onClick={() => act(() => {
+          const newLayout = node.staffLayout === "horizontal" ? "vertical" : "horizontal";
+          setNodes(nodes.map((n) => n.id === ctx.nodeId ? { ...n, staffLayout: newLayout } : n));
+          syncNodes();
+        }, "Toggle staff layout")}>
+          Staff layout: {node.staffLayout === "horizontal" ? "→ Vertical" : "→ Horizontal"}
+        </button>
+      )}
+      {hasRegularChildren && (
+        <button className="context-menu__item" onClick={() => act(() => {
+          const newLayout = node.childrenLayout === "horizontal" ? "vertical" : "horizontal";
+          setNodes(nodes.map((n) => n.id === ctx.nodeId ? { ...n, childrenLayout: newLayout } : n));
+          syncNodes();
+        }, "Toggle children layout")}>
+          Children layout: {node.childrenLayout === "horizontal" ? "→ Vertical" : "→ Horizontal"}
+        </button>
+      )}
 
       <div className="context-menu__separator" />
 

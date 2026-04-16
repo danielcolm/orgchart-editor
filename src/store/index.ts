@@ -30,9 +30,11 @@ interface AppStore {
   contextMenu: ContextMenuState;
   collapsedNodes: Set<string>;
   focusNodeId: string | null;
+  focusWithParents: boolean;
   viewMode: ViewMode;
   editingNodeId: string | null;
   showNames: boolean;
+  collapseAfterLevel: number | null;
 
   // Actions — project
   openProject: (id: string) => Promise<void>;
@@ -60,11 +62,12 @@ interface AppStore {
   showContextMenu: (x: number, y: number, nodeId: string) => void;
   hideContextMenu: () => void;
   toggleCollapse: (id: string) => void;
-  setFocus: (id: string | null) => void;
+  setFocus: (id: string | null, withParents?: boolean) => void;
   resetView: () => void;
   setViewMode: (mode: ViewMode) => void;
   setEditingNodeId: (id: string | null) => void;
   toggleShowNames: () => void;
+  setCollapseAfterLevel: (level: number | null) => void;
 
   // Snapshot
   takeSnapshot: (label: string) => Promise<void>;
@@ -121,8 +124,10 @@ export const useStore = create<AppStore>((set, get) => ({
       contextMenu: { visible: false, x: 0, y: 0, nodeId: null },
       collapsedNodes: new Set(),
       focusNodeId: null,
+      focusWithParents: false,
       viewMode: "graph",
       editingNodeId: null,
+      collapseAfterLevel: null,
     });
   },
 
@@ -176,9 +181,11 @@ export const useStore = create<AppStore>((set, get) => ({
   contextMenu: { visible: false, x: 0, y: 0, nodeId: null },
   collapsedNodes: new Set(),
   focusNodeId: null,
+  focusWithParents: false,
   viewMode: "graph",
   editingNodeId: null,
   showNames: true,
+  collapseAfterLevel: null,
 
   selectNode: (id) => set({ selectedNodeId: id }),
   showContextMenu: (x, y, nodeId) =>
@@ -192,9 +199,10 @@ export const useStore = create<AppStore>((set, get) => ({
       else next.add(id);
       return { collapsedNodes: next };
     }),
-  setFocus: (id) => set({ focusNodeId: id }),
+  setFocus: (id, withParents) => set({ focusNodeId: id, focusWithParents: withParents ?? false }),
   resetView: () =>
-    set({ collapsedNodes: new Set(), focusNodeId: null }),
+    set({ collapsedNodes: new Set(), focusNodeId: null, focusWithParents: false, collapseAfterLevel: null }),
+  setCollapseAfterLevel: (level) => set({ collapseAfterLevel: level }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setEditingNodeId: (id) => set({ editingNodeId: id }),
   toggleShowNames: () => set((s) => ({ showNames: !s.showNames })),

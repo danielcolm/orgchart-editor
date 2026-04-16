@@ -16,6 +16,8 @@
 .org-node-wrapper:hover .org-node, .org-node:hover { border-color: var(--color-accent); }
 .org-node.selected { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent-subtle); }
 .org-node.staff { border-color: var(--color-staff); border-width: 1px; }
+.org-node.vertical { padding: 6px 10px; }
+.org-node.vertical .org-node__name { font-size: 12px; }
 
 .org-node__name { font-weight: 600; font-size: 13px; color: var(--color-text); }
 .org-node__name--fallback { font-style: italic; color: var(--color-text-secondary); }
