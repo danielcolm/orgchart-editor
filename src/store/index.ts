@@ -74,9 +74,21 @@ interface AppStore {
 }
 
 export const useStore = create<AppStore>((set, get) => ({
-  // Auth
-  authenticated: false,
-  setAuthenticated: (v) => set({ authenticated: v }),
+  // Auth — persisted 7 days
+  authenticated: (() => {
+    const expiresAt = localStorage.getItem("orgchart-auth-expires");
+    if (!expiresAt) return false;
+    return parseInt(expiresAt) > Date.now();
+  })(),
+  setAuthenticated: (v) => {
+    if (v) {
+      const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      localStorage.setItem("orgchart-auth-expires", String(expires));
+    } else {
+      localStorage.removeItem("orgchart-auth-expires");
+    }
+    set({ authenticated: v });
+  },
 
   // Theme
   theme: (localStorage.getItem("orgchart-theme") as ThemeMode) ?? "dark",

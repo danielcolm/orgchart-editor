@@ -88,7 +88,7 @@ function CanvasInner() {
         isSelected: selectedNodeId === node.id,
         nodeId: node.id, translationStatus: status,
         isCollapsed, hiddenCount, tagColors,
-        isVertical: layoutMap.get(node.id)?.isVertical ?? right,
+        isVertical: layoutMap.get(node.id)?.isVertical ?? false,
         nodeWidth: layoutMap.get(node.id)?.width ?? 180,
       };
 

@@ -23,6 +23,7 @@ function camelToSnake(obj: Record<string, unknown>): Record<string, unknown> {
   }
   return result;
 }
+
 // ── PIN ──────────────────────────────────────────────────────
 
 export async function verifyPin(pin: string): Promise<boolean> {

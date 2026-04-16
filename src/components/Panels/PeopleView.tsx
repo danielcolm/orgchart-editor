@@ -3,14 +3,34 @@ import { useStore } from "@/store";
 export function PeopleView() {
   const people = useStore((s) => s.people);
   const nodes = useStore((s) => s.nodes);
+  const setNodes = useStore((s) => s.setNodes);
+  const syncNodes = useStore((s) => s.syncNodes);
+  const removePerson = useStore((s) => s.removePerson);
+  const takeSnapshot = useStore((s) => s.takeSnapshot);
   const activeLanguage = useStore((s) => s.activeLanguage);
   const settings = useStore((s) => s.settings);
 
-  // For each person, find which roles they're assigned to
   function getRoles(uid: string): string[] {
     return nodes
       .filter((n) => n.assignedPeople?.includes(uid))
       .map((n) => n.translations[activeLanguage]?.name ?? n.translations[settings.dominantLanguage]?.name ?? n.id);
+  }
+
+  async function handleDelete(uid: string, fullName: string) {
+    const rolesCount = nodes.filter((n) => n.assignedPeople?.includes(uid)).length;
+    const extra = rolesCount > 0 ? `\nThis person is assigned to ${rolesCount} role(s) — they will be unassigned.` : "";
+    if (!confirm(`Delete "${fullName}"?${extra}`)) return;
+    takeSnapshot("Delete person");
+    // Unassign from all nodes
+    if (rolesCount > 0) {
+      const updated = nodes.map((n) => ({
+        ...n,
+        assignedPeople: (n.assignedPeople ?? []).filter((u) => u !== uid),
+      }));
+      setNodes(updated);
+      await syncNodes();
+    }
+    await removePerson(uid);
   }
 
   return (
@@ -29,6 +49,7 @@ export function PeopleView() {
                 <th style={S.th}>Gender</th>
                 <th style={S.th}>Hire Date</th>
                 <th style={S.th}>Roles</th>
+                <th style={S.th}></th>
               </tr>
             </thead>
             <tbody>
@@ -39,6 +60,13 @@ export function PeopleView() {
                   <td style={S.td}>{p.gender === "male" ? "M" : p.gender === "female" ? "F" : "—"}</td>
                   <td style={{ ...S.td, color: "var(--color-text-muted)" }}>{p.hireDate || "—"}</td>
                   <td style={{ ...S.td, color: "var(--color-accent)" }}>{getRoles(p.uid).join(", ") || "—"}</td>
+                  <td style={{ ...S.td, textAlign: "right" }}>
+                    <button
+                      onClick={() => handleDelete(p.uid, `${p.firstName} ${p.lastName}`.trim())}
+                      style={S.delBtn}
+                      title="Delete person"
+                    >✕</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -58,4 +86,5 @@ const S: Record<string, React.CSSProperties> = {
   table: { width: "100%", borderCollapse: "collapse" as const },
   th: { textAlign: "left" as const, padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--color-text-muted)", textTransform: "uppercase" as const, letterSpacing: "0.05em", borderBottom: "1px solid var(--color-border)" },
   td: { padding: "10px 12px", fontSize: 13, borderBottom: "1px solid var(--color-border-subtle)" },
+  delBtn: { width: 24, height: 24, borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: 13, cursor: "pointer" },
 };

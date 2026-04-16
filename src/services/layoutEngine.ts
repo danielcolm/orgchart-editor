@@ -57,6 +57,21 @@ export function computeLayout(nodes: OrgNode[]): LayoutResult {
     return which === "staff" ? node.staffLayout : node.childrenLayout;
   }
 
+  function estimateNodeHeight(node: OrgNode): number {
+    let h = NODE_HEIGHT;
+    // Person names (assume most languages, count people)
+    const peopleCount = node.assignedPeople?.length ?? 0;
+    if (peopleCount > 0) h += 16;
+    // If description is set, roughly estimate 16px per 20 chars (crude but works)
+    // Use the dominant/first translation
+    const anyTranslation = Object.values(node.translations)[0];
+    if (anyTranslation?.description) {
+      const descLines = Math.ceil((anyTranslation.description.length ?? 0) / 22);
+      h += descLines * 16;
+    }
+    return h;
+  }
+
   function layoutVerticalGroup(childNodes: OrgNode[]): SubtreeResult {
     if (childNodes.length === 0) return { positions: [], width: 0, height: 0 };
 
@@ -65,8 +80,9 @@ export function computeLayout(nodes: OrgNode[]): LayoutResult {
     let maxWidth = VERT_NODE_WIDTH;
 
     for (const child of childNodes) {
+      const h = estimateNodeHeight(child);
       allPositions.push({ id: child.id, x: 0, y: currentY, width: VERT_NODE_WIDTH, isVertical: true });
-      currentY += NODE_HEIGHT + VERT_ROW_GAP;
+      currentY += h + VERT_ROW_GAP;
 
       const sub = layoutNodeChildren(child.id);
       if (sub.positions.length > 0) {
