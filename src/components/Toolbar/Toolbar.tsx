@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import type { ViewMode } from "@/types/ui";
