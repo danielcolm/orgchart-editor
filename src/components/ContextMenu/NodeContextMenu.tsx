@@ -118,7 +118,7 @@ export function NodeContextMenu() {
           translations: translations as any,
         }]);
         hide();
-      }}>Add relation →</button>
+      }}>Add relation</button>
 
       {nodeRelations.length > 0 && <>
 {nodeRelations.length > 0 && <>
