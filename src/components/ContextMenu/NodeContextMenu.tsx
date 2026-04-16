@@ -90,7 +90,38 @@ export function NodeContextMenu() {
         syncNodes();
       }, "Toggle staff")}>{node.isStaff ? "Make regular child" : "Make staff"}</button>}
 
+      <button className="context-menu__item" onClick={() => {
+        const otherNodes = nodes.filter((n) => n.id !== ctx.nodeId);
+        const names = otherNodes.map((n, i) => {
+          const t = n.translations[settings.languages[0]?.code];
+          return `${i + 1}. ${t?.name ?? n.id}`;
+        }).join("\n");
+        const choice = prompt(`Connect to:\n${names}\n\nEnter number:`);
+        if (!choice) { hide(); return; }
+        const idx = parseInt(choice) - 1;
+        if (idx < 0 || idx >= otherNodes.length) { hide(); return; }
+        const targetId = otherNodes[idx].id;
+        if (relations.some((r) => r.sourceId === ctx.nodeId && r.targetId === targetId)) {
+          alert("Relation already exists"); hide(); return;
+        }
+        takeSnapshot("Add relation");
+        const now = Date.now();
+        const translations: Record<string, unknown> = {};
+        for (const lang of settings.languages) {
+          translations[lang.code] = { label: "", updatedAt: now };
+        }
+        setRelations([...relations, {
+          id: crypto.randomUUID(),
+          projectId: nodes[0]?.projectId ?? "",
+          sourceId: ctx.nodeId!,
+          targetId,
+          translations: translations as any,
+        }]);
+        hide();
+      }}>Add relation →</button>
+
       {nodeRelations.length > 0 && <>
+{nodeRelations.length > 0 && <>
         <div className="context-menu__separator" />
         {nodeRelations.map((rel) => {
           const otherId = rel.sourceId === ctx.nodeId ? rel.targetId : rel.sourceId;
