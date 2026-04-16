@@ -57,22 +57,39 @@ export function computeLayout(nodes: OrgNode[]): LayoutResult {
     return which === "staff" ? node.staffLayout : node.childrenLayout;
   }
 
- function estimateNodeHeight(node: OrgNode): number {
-    let h = NODE_HEIGHT;
+function estimateNodeHeight(node: OrgNode): number {
+    // Vertical nodes: 160px wide, ~22 chars per line at 13px font
+    // CSS: padding 6px top + 6px bottom = 12px
+    const VERT_PADDING = 12;
+    const NODE_NAME_LINE = 19;   // 13px * 1.4
+    const SMALL_LINE = 16;        // 11px * 1.5
+    const CHARS_PER_LINE = 22;
+
+    let h = VERT_PADDING;
+
+    // Node name (required). Consider wrapping.
+    const anyTranslation = Object.values(node.translations)[0];
+    const nameText = anyTranslation?.name ?? "";
+    const nameLines = Math.max(1, Math.ceil(nameText.length / CHARS_PER_LINE));
+    h += nameLines * NODE_NAME_LINE;
+
+    // Person names (joined with ", ")
     const peopleCount = node.assignedPeople?.length ?? 0;
     if (peopleCount > 0) {
-      // People names wrap. Estimate ~18 chars per name + ", " separator = 20.
-      // Vertical node ~22 chars per line. Calculate total lines needed.
-      const totalChars = peopleCount * 20;
-      const lines = Math.max(1, Math.ceil(totalChars / 22));
-      h += lines * 16;
+      // Rough average: 15 chars per person name + 2 for separator
+      const totalChars = peopleCount * 17;
+      const personLines = Math.max(1, Math.ceil(totalChars / CHARS_PER_LINE));
+      h += personLines * SMALL_LINE + 2; // +2 for margin-top
     }
-    const anyTranslation = Object.values(node.translations)[0];
+
+    // Description
     if (anyTranslation?.description) {
-      const descLines = Math.ceil((anyTranslation.description.length ?? 0) / 22);
-      h += descLines * 16;
+      const descLines = Math.ceil(anyTranslation.description.length / CHARS_PER_LINE);
+      h += descLines * SMALL_LINE + 2;
     }
-    return h;
+
+    // Minimum
+    return Math.max(h, 50);
   }
 
   function layoutVerticalGroup(childNodes: OrgNode[]): SubtreeResult {
