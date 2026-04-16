@@ -6,7 +6,7 @@ const NODE_HEIGHT = 60;
 const VERT_NODE_WIDTH = 160;
 const RANK_SEP = 90;
 const NODE_SEP = 40;
-const VERT_ROW_GAP = 8;
+const VERT_ROW_GAP = 20;
 const VERT_INDENT = 20;
 const GROUP_GAP = 60;
 
@@ -64,6 +64,8 @@ export function computeLayout(
     return which === "staff" ? node.staffLayout : node.childrenLayout;
   }
 
+  // ── Vertical group layout ──────────────────────────────────
+
   function layoutVerticalGroup(childNodes: OrgNode[]): SubtreeResult {
     if (childNodes.length === 0) return { positions: [], width: 0, height: 0 };
 
@@ -88,9 +90,12 @@ export function computeLayout(
     return { positions: allPositions, width: maxWidth, height: Math.max(0, currentY - VERT_ROW_GAP) };
   }
 
+  // ── Horizontal group layout (dagre) ────────────────────────
+
   function layoutHorizontalGroup(childNodes: OrgNode[]): SubtreeResult {
     if (childNodes.length === 0) return { positions: [], width: 0, height: 0 };
 
+    // Collect all IDs in the horizontal subtree
     function collectHoriz(rootIds: string[]): string[] {
       const result: string[] = [];
       const queue = [...rootIds];
@@ -108,19 +113,21 @@ export function computeLayout(
     const allIds = collectHoriz(childNodes.map((n) => n.id));
     const idSet = new Set(allIds);
 
+    // Build dagre graph
     const g = new dagre.graphlib.Graph();
     g.setGraph({ rankdir: "TB", ranksep: RANK_SEP, nodesep: NODE_SEP, marginx: 0, marginy: 0 });
     g.setDefaultEdgeLabel(() => ({}));
     for (const id of allIds) g.setNode(id, { width: NODE_WIDTH, height: getHeight(id) });
 
-const childrenByParent = new Map<string, OrgNode[]>();
-    // The top-level childNodes are all siblings (passed together as a group)
-    const rootGroupKey = "__rootGroup__";
-    for (const child of childNodes) {
-      const list = childrenByParent.get(rootGroupKey) ?? [];
-      list.push(child);
-      childrenByParent.set(rootGroupKey, list);
-    }
+    // Build parent-child map, including a virtual root group for the top-level siblings
+    const childrenByParent = new Map<string, OrgNode[]>();
+
+    // Top-level childNodes are siblings — register them under a virtual key
+    const ROOT_GROUP = "__rootGroup__";
+    const rootList: OrgNode[] = [];
+    for (const child of childNodes) rootList.push(child);
+    if (rootList.length > 0) childrenByParent.set(ROOT_GROUP, rootList);
+
     // Inner parent-child relationships
     for (const id of allIds) {
       const node = nodeMap.get(id)!;
@@ -130,8 +137,10 @@ const childrenByParent = new Map<string, OrgNode[]>();
         childrenByParent.set(node.parentId, list);
       }
     }
+
+    // Add edges to dagre (skip virtual root group)
     for (const [pid, children] of childrenByParent) {
-      if (pid === "__rootGroup__") continue;
+      if (pid === ROOT_GROUP) continue;
       const sorted = [
         ...children.filter((n) => n.isStaff).sort((a, b) => a.order - b.order),
         ...children.filter((n) => !n.isStaff).sort((a, b) => a.order - b.order),
@@ -141,6 +150,7 @@ const childrenByParent = new Map<string, OrgNode[]>();
 
     dagre.layout(g);
 
+    // Extract positions
     const positions: LayoutPosition[] = allIds.map((id) => {
       const pos = g.node(id);
       const h = getHeight(id);
@@ -149,6 +159,7 @@ const childrenByParent = new Map<string, OrgNode[]>();
 
     const posById = new Map(positions.map((p) => [p.id, p]));
 
+    // Helper: get all descendant IDs within this horizontal group
     function getDescIds(nid: string): string[] {
       const res: string[] = [];
       const q = allIds.filter((i) => { const n = nodeMap.get(i); return n && n.parentId === nid; });
@@ -160,7 +171,8 @@ const childrenByParent = new Map<string, OrgNode[]>();
       return res;
     }
 
-    for (const [, children] of childrenByParent) {
+    // Post-process 1: Enforce sibling X order (staff first, then by order)
+    for (const [key, children] of childrenByParent) {
       if (children.length <= 1) continue;
       const desired = [
         ...children.filter((n) => n.isStaff).sort((a, b) => a.order - b.order),
@@ -180,10 +192,13 @@ const childrenByParent = new Map<string, OrgNode[]>();
         }
       }
     }
-// Align siblings on the same Y (top)
+
+    // Post-process 2: Align siblings on the same Y (top-aligned)
     for (const [, children] of childrenByParent) {
       if (children.length <= 1) continue;
-      const sibPositions = children.map((c) => posById.get(c.id)).filter(Boolean) as LayoutPosition[];
+      const sibPositions = children
+        .map((c) => posById.get(c.id))
+        .filter(Boolean) as LayoutPosition[];
       if (sibPositions.length === 0) continue;
       const topY = Math.min(...sibPositions.map((p) => p.y));
       for (const sibPos of sibPositions) {
@@ -197,6 +212,7 @@ const childrenByParent = new Map<string, OrgNode[]>();
         }
       }
     }
+
     // Handle vertical sub-groups within horizontal tree
     const verticalAttachments: LayoutPosition[] = [];
     for (const id of allIds) {
@@ -225,6 +241,7 @@ const childrenByParent = new Map<string, OrgNode[]>();
     }
     positions.push(...verticalAttachments);
 
+    // Bounding box
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const p of positions) {
       minX = Math.min(minX, p.x);
@@ -234,6 +251,8 @@ const childrenByParent = new Map<string, OrgNode[]>();
     }
     return { positions, width: positions.length > 0 ? maxX - minX : 0, height: positions.length > 0 ? maxY - minY : 0 };
   }
+
+  // ── Layout all children of a node ──────────────────────────
 
   function layoutNodeChildren(nodeId: string): SubtreeResult {
     const staffChildren = getStaffChildren(nodeId);
@@ -250,6 +269,7 @@ const childrenByParent = new Map<string, OrgNode[]>();
       return layoutVerticalGroup([...staffChildren, ...regularChildren]);
     }
 
+    // Mixed: layout each group separately, place side by side
     const staffResult = staffChildren.length > 0
       ? sL === "vertical" ? layoutVerticalGroup(staffChildren) : layoutHorizontalGroup(staffChildren)
       : { positions: [], width: 0, height: 0 };
@@ -281,6 +301,8 @@ const childrenByParent = new Map<string, OrgNode[]>();
     return { positions: allPositions, width: w, height: h };
   }
 
+  // ── Main: layout from root ─────────────────────────────────
+
   const roots = nodes.filter((n) => n.parentId === null);
   if (roots.length === 0) return { positions: [] };
   const root = roots[0];
@@ -295,6 +317,7 @@ const childrenByParent = new Map<string, OrgNode[]>();
     allPositions.push({ ...p, x: p.x + subtreeOffsetX, y: p.y + subtreeOffsetY });
   }
 
+  // Normalize X
   const minX = Math.min(...allPositions.map((p) => p.x));
   if (minX < 40) {
     const shift = 40 - minX;
