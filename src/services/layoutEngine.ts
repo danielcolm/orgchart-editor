@@ -185,6 +185,11 @@ export function computeLayout(
     }
 
     // Align siblings on the same Y (top)
+console.log("Sibling groups found:", childrenByParent.size);
+    for (const [parentId, children] of childrenByParent) {
+      const ys = children.map((c) => posById.get(c.id)?.y).filter(v => v !== undefined);
+      console.log(`  Parent ${parentId}: ${children.length} children, Y values:`, ys);
+    }
     for (const [, children] of childrenByParent) {
       if (children.length <= 1) continue;
       const sibPositions = children.map((c) => posById.get(c.id)).filter(Boolean) as LayoutPosition[];
