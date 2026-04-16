@@ -171,6 +171,36 @@ export function computeLayout(
         }
       }
     }
+// Normalize sibling heights: all siblings in a group get the max height
+    for (const [, children] of childrenByParent) {
+      if (children.length <= 1) continue;
+      const sibHeights = children.map((c) => getHeight(c.id));
+      const maxH = Math.max(...sibHeights);
+      for (const child of children) {
+        if (getHeight(child.id) < maxH) {
+          // Override height for layout purposes
+          nodeHeights?.set(child.id, maxH);
+        }
+      }
+    }
+
+    // Align siblings on the same Y (top)
+    for (const [, children] of childrenByParent) {
+      if (children.length <= 1) continue;
+      const sibPositions = children.map((c) => posById.get(c.id)).filter(Boolean) as LayoutPosition[];
+      if (sibPositions.length === 0) continue;
+      const topY = Math.min(...sibPositions.map((p) => p.y));
+      for (const sibPos of sibPositions) {
+        const dy = topY - sibPos.y;
+        if (dy !== 0) {
+          sibPos.y = topY;
+          for (const d of getDescIds(sibPos.id)) {
+            const dp = posById.get(d);
+            if (dp) dp.y += dy;
+          }
+        }
+      }
+    }
 // Align siblings on the same Y (top)
     for (const [, children] of childrenByParent) {
       if (children.length <= 1) continue;

@@ -40,8 +40,11 @@
 /* Hover buttons */
 .org-node__hover-btns {
   position: absolute; opacity: 0; transition: opacity var(--transition-fast);
-  pointer-events: none; z-index: 10;
+  pointer-events: none; z-index: 9999;
 }
+
+.org-node-wrapper:hover { z-index: 9999; }
+
 .org-node-wrapper:hover .org-node__hover-btns { opacity: 1; pointer-events: all; }
 .org-node__hover-btn {
   width: 20px; height: 20px; border-radius: 50%;
