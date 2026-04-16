@@ -120,7 +120,6 @@ export function NodeContextMenu() {
         hide();
       }}>Add relation</button>
 
-      {nodeRelations.length > 0 && <>
 {nodeRelations.length > 0 && <>
         <div className="context-menu__separator" />
         {nodeRelations.map((rel) => {
