@@ -6,7 +6,7 @@ const NODE_HEIGHT = 60;
 const VERT_NODE_WIDTH = 160;
 const RANK_SEP = 90;
 const NODE_SEP = 40;
-const VERT_ROW_GAP = 8;
+const VERT_ROW_GAP = 16;
 const VERT_INDENT = 20;
 const GROUP_GAP = 60;
 
