@@ -15,12 +15,14 @@ function snakeToCamel(row: Record<string, unknown>): Record<string, unknown> {
 function camelToSnake(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
+    // Skip undefined values and timestamps (let Supabase manage them)
+    if (value === undefined) continue;
+    if (key === "createdAt" || key === "updatedAt") continue;
     const snake = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
     result[snake] = value;
   }
   return result;
 }
-
 // ── PIN ──────────────────────────────────────────────────────
 
 export async function verifyPin(pin: string): Promise<boolean> {
