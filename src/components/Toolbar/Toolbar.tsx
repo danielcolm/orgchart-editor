@@ -1,14 +1,21 @@
 import { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import type { ViewMode } from "@/types/ui";
+import { exportPng, exportPdf } from "@/services/exportService";
+import { exportToExcel } from "@/services/excelService";
+import { ImportDialog } from "@/components/Dialogs/ImportDialog";
 
 export function Toolbar() {
   const navigate = useNavigate();
   const projectName = useStore((s) => s.projectName);
   const viewMode = useStore((s) => s.viewMode);
   const setViewMode = useStore((s) => s.setViewMode);
-  const nodeCount = useStore((s) => s.nodes.length);
+  const nodes = useStore((s) => s.nodes);
+  const relations = useStore((s) => s.relations);
+  const people = useStore((s) => s.people);
+  const nodeCount = nodes.length;
   const focusNodeId = useStore((s) => s.focusNodeId);
   const collapsedNodes = useStore((s) => s.collapsedNodes);
   const collapseAfterLevel = useStore((s) => s.collapseAfterLevel);
@@ -22,6 +29,9 @@ export function Toolbar() {
   const setActiveLanguage = useStore((s) => s.setActiveLanguage);
   const settings = useStore((s) => s.settings);
 
+  const [showImport, setShowImport] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
   const hasActiveView = focusNodeId !== null || collapsedNodes.size > 0 || collapseAfterLevel !== null;
 
   const tabs: { mode: ViewMode; label: string }[] = [
@@ -31,7 +41,26 @@ export function Toolbar() {
     { mode: "settings", label: "Settings" },
   ];
 
+  async function handleExportPng() {
+    setShowExportMenu(false);
+    try { await exportPng(`${projectName}.png`); }
+    catch (err) { alert(`PNG export failed: ${err}`); }
+  }
+
+  async function handleExportPdf() {
+    setShowExportMenu(false);
+    try { await exportPdf(`${projectName}.pdf`); }
+    catch (err) { alert(`PDF export failed: ${err}`); }
+  }
+
+  function handleExportExcel() {
+    setShowExportMenu(false);
+    try { exportToExcel(projectName, settings, nodes, relations, people, `${projectName}.xlsx`); }
+    catch (err) { alert(`Excel export failed: ${err}`); }
+  }
+
   return (
+    <>
     <div style={S.bar}>
       <div style={S.left}>
         <button onClick={() => navigate("/")} style={S.home} title="Home">◂</button>
@@ -54,15 +83,12 @@ export function Toolbar() {
             <div style={S.levelWrap} title="Collapse all nodes from this level down">
               <span style={S.levelLabel}>Collapse ≥</span>
               <input
-                type="number"
-                min={2}
-                value={collapseAfterLevel ?? ""}
+                type="number" min={2} value={collapseAfterLevel ?? ""}
                 onChange={(e) => {
                   const v = e.target.value;
                   setCollapseAfterLevel(v === "" ? null : Math.max(2, parseInt(v)));
                 }}
-                placeholder="—"
-                style={S.levelInput}
+                placeholder="—" style={S.levelInput}
               />
             </div>
             <button onClick={toggleShowNames} style={S.toolBtn}>
@@ -70,6 +96,17 @@ export function Toolbar() {
             </button>
           </>
         )}
+        <button onClick={() => setShowImport(true)} style={S.toolBtn} title="Import Excel">Import</button>
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setShowExportMenu(!showExportMenu)} style={S.toolBtn}>Export ▾</button>
+          {showExportMenu && (
+            <div style={S.dropdown}>
+              <button style={S.dropItem} onClick={handleExportPng}>PNG Image</button>
+              <button style={S.dropItem} onClick={handleExportPdf}>PDF Document</button>
+              <button style={S.dropItem} onClick={handleExportExcel}>Excel (.xlsx)</button>
+            </div>
+          )}
+        </div>
         <button onClick={toggleTheme} style={S.toolBtn} title="Toggle theme">
           {theme === "dark" ? "☀" : "☾"}
         </button>
@@ -83,6 +120,8 @@ export function Toolbar() {
         </div>
       </div>
     </div>
+    {showImport && <ImportDialog onClose={() => setShowImport(false)} />}
+    </>
   );
 }
 
@@ -104,4 +143,6 @@ const S: Record<string, React.CSSProperties> = {
   langWrap: { display: "flex", gap: 2, background: "var(--color-bg)", borderRadius: "var(--radius-sm)", padding: 2 },
   langBtn: { padding: "4px 10px", borderRadius: "var(--radius-sm)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.03em" },
   langActive: { background: "var(--color-accent)", color: "#fff" },
+  dropdown: { position: "absolute" as const, top: "100%", right: 0, marginTop: 4, background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "4px 0", minWidth: 150, boxShadow: "var(--shadow-lg)", zIndex: 100 },
+  dropItem: { display: "block", width: "100%", padding: "8px 14px", fontSize: 13, textAlign: "left" as const, color: "var(--color-text)", background: "none", border: "none", cursor: "pointer" },
 };
