@@ -43,12 +43,12 @@ export function WorkspaceManager() {
       translations: rootTranslations as any,
     });
     await loadProjects();
-    store.openProject(project.id).then(() => navigate("/editor"));
+    store.openProject(project.id).then(() => navigate(`/editor/${project.id}`));
   }
 
   async function handleOpen(id: string) {
     await store.openProject(id);
-    navigate("/editor");
+    navigate(`/editor/${id}`);
   }
 
   async function handleDelete(id: string, name: string) {

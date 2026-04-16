@@ -26,7 +26,7 @@ export function App() {
         <AuthGate>
           <Routes>
             <Route path="/" element={<WorkspaceManager />} />
-            <Route path="/editor" element={<EditorPage />} />
+            <Route path="/editor/:projectId" element={<EditorPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </AuthGate>

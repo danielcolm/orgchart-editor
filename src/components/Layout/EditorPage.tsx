@@ -6,17 +6,25 @@ import { DetailPanel } from "@/components/Panels/DetailPanel";
 import { HistoryView } from "@/components/Panels/HistoryView";
 import { SettingsView } from "@/components/Panels/SettingsView";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 export function EditorPage() {
   const viewMode = useStore((s) => s.viewMode);
   const projectId = useStore((s) => s.projectId);
   const selectedNodeId = useStore((s) => s.selectedNodeId);
+  const openProject = useStore((s) => s.openProject);
   const navigate = useNavigate();
+  const { projectId: urlProjectId } = useParams<{ projectId: string }>();
 
   useEffect(() => {
-    if (!projectId) navigate("/");
-  }, [projectId, navigate]);
+    if (!urlProjectId) {
+      navigate("/");
+      return;
+    }
+    if (projectId !== urlProjectId) {
+      openProject(urlProjectId).catch(() => navigate("/"));
+    }
+  }, [urlProjectId, projectId, openProject, navigate]);
 
   if (!projectId) return null;
 
