@@ -6,7 +6,7 @@ const NODE_HEIGHT = 60;
 const VERT_NODE_WIDTH = 160;
 const RANK_SEP = 90;
 const NODE_SEP = 40;
-const VERT_ROW_GAP = 48;
+const VERT_ROW_GAP = 24;
 const VERT_INDENT = 20;
 const GROUP_GAP = 60;
 
@@ -171,7 +171,23 @@ export function computeLayout(
         }
       }
     }
-
+// Align siblings on the same Y (top)
+    for (const [, children] of childrenByParent) {
+      if (children.length <= 1) continue;
+      const sibPositions = children.map((c) => posById.get(c.id)).filter(Boolean) as LayoutPosition[];
+      if (sibPositions.length === 0) continue;
+      const topY = Math.min(...sibPositions.map((p) => p.y));
+      for (const sibPos of sibPositions) {
+        const dy = topY - sibPos.y;
+        if (dy !== 0) {
+          sibPos.y = topY;
+          for (const d of getDescIds(sibPos.id)) {
+            const dp = posById.get(d);
+            if (dp) dp.y += dy;
+          }
+        }
+      }
+    }
     // Handle vertical sub-groups within horizontal tree
     const verticalAttachments: LayoutPosition[] = [];
     for (const id of allIds) {

@@ -51,7 +51,7 @@
 }
 .org-node__hover-btn:hover { background: var(--color-accent-hover); }
 .org-node__hover-btns--top { top: -10px; left: 50%; transform: translateX(-50%); }
-.org-node__hover-btns--bottom { bottom: -10px; left: 50%; transform: translateX(-50%); }
+.org-node__hover-btns--bottom { bottom: -14px; left: 50%; transform: translateX(-50%); }
 .org-node__hover-btns--right { right: -10px; top: 50%; transform: translateY(-50%); }
 
 .org-node__rename-input {
