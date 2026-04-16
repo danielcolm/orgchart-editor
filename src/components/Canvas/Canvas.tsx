@@ -109,7 +109,6 @@ function CanvasInner() {
           id: `e-${n.parentId}-${n.id}`,
           source: n.parentId!,
           target: n.id,
-          sourceHandle: isVertical ? "right" : undefined,
           targetHandle: isVertical ? "left" : undefined,
           type: "smoothstep",
           style: { stroke: "var(--color-border)" },
