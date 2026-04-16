@@ -214,7 +214,16 @@ export function computeLayout(
     }
 
     // Handle vertical sub-groups within horizontal tree
-    const verticalAttachments: LayoutPosition[] = [];
+    // Pass 1: calculate where each vertical group would start
+    type VertAttachment = {
+      parentId: string;
+      vOffsetX: number;
+      vOffsetY: number;
+      result: SubtreeResult;
+      horizDescIds: string[];
+    };
+    const vertAttachments: VertAttachment[] = [];
+
     for (const id of allIds) {
       const sL = getEffectiveLayout(id, "staff");
       const cL = getEffectiveLayout(id, "children");
@@ -227,19 +236,46 @@ export function computeLayout(
       const parentPos = posById.get(id);
       if (!parentPos || vertResult.positions.length === 0) continue;
 
-      const vOffsetX = parentPos.x;
-      const vOffsetY = parentPos.y + getHeight(id) + RANK_SEP;
-      const horizDescIds = getDescIds(id);
-      const pushDown = vertResult.height + VERT_ROW_GAP;
-      for (const did of horizDescIds) {
+      vertAttachments.push({
+        parentId: id,
+        vOffsetX: parentPos.x,
+        vOffsetY: parentPos.y + getHeight(id) + RANK_SEP,
+        result: vertResult,
+        horizDescIds: getDescIds(id),
+      });
+    }
+
+    // Pass 2: align — siblings with vertical children should start their vertical groups at the same Y
+    // Group by parent's parent (siblings share the same parent)
+    if (vertAttachments.length > 1) {
+      const byGrandparent = new Map<string, VertAttachment[]>();
+      for (const va of vertAttachments) {
+        const parentNode = nodeMap.get(va.parentId);
+        const gpId = parentNode?.parentId ?? "__root__";
+        const list = byGrandparent.get(gpId) ?? [];
+        list.push(va);
+        byGrandparent.set(gpId, list);
+      }
+      for (const [, group] of byGrandparent) {
+        if (group.length <= 1) continue;
+        const maxY = Math.max(...group.map((va) => va.vOffsetY));
+        for (const va of group) va.vOffsetY = maxY;
+      }
+    }
+
+    // Pass 3: apply offsets and push down horizontal descendants
+    const verticalPositions: LayoutPosition[] = [];
+    for (const va of vertAttachments) {
+      const pushDown = va.result.height + VERT_ROW_GAP;
+      for (const did of va.horizDescIds) {
         const dp = posById.get(did);
         if (dp) dp.y += pushDown;
       }
-      for (const vp of vertResult.positions) {
-        verticalAttachments.push({ ...vp, x: vp.x + vOffsetX, y: vp.y + vOffsetY });
+      for (const vp of va.result.positions) {
+        verticalPositions.push({ ...vp, x: vp.x + va.vOffsetX, y: vp.y + va.vOffsetY });
       }
     }
-    positions.push(...verticalAttachments);
+    positions.push(...verticalPositions);
 
     // Bounding box
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;

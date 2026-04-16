@@ -1,5 +1,4 @@
-.org-node-wrapper { padding: 18px; margin: -18px; position: relative; }
-.org-node-wrapper:hover { z-index: 9999; }
+.org-node-wrapper { position: relative; }
 
 .org-node {
   background: var(--color-bg-surface); border: 1px solid var(--color-border);
@@ -8,13 +7,14 @@
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
     transform var(--transition-fast), opacity var(--transition-fast);
   position: relative; word-wrap: break-word; overflow-wrap: break-word;
+  overflow: visible;
 }
 .dragging .org-node {
   cursor: grabbing;
   box-shadow: 0 8px 24px rgba(78,143,255,0.3), 0 0 0 2px var(--color-accent);
   border-color: var(--color-accent); transform: scale(1.05); z-index: 100; opacity: 0.9;
 }
-.org-node-wrapper:hover .org-node, .org-node:hover { border-color: var(--color-accent); }
+.org-node:hover { border-color: var(--color-accent); }
 .org-node.selected { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent-subtle); }
 .org-node.staff { border-color: var(--color-staff); border-width: 1px; }
 .org-node.vertical { padding: 6px 10px; }
@@ -38,12 +38,12 @@
   border-radius: 6px; margin: 1px 2px; text-transform: uppercase; letter-spacing: 0.03em;
 }
 
-/* Hover buttons */
+/* Hover buttons — inside org-node, positioned absolute relative to it */
 .org-node__hover-btns {
   position: absolute; opacity: 0; transition: opacity var(--transition-fast);
   pointer-events: none; z-index: 9999;
 }
-.org-node-wrapper:hover .org-node__hover-btns { opacity: 1; pointer-events: all; }
+.org-node:hover .org-node__hover-btns { opacity: 1; pointer-events: all; }
 .org-node__hover-btn {
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--color-accent); color: #fff; font-size: 13px; font-weight: 700;
@@ -51,9 +51,8 @@
   cursor: pointer; border: 2px solid var(--color-bg-surface); line-height: 1;
 }
 .org-node__hover-btn:hover { background: var(--color-accent-hover); }
-.org-node__hover-btns--top { top: -16px; left: 50%; transform: translateX(-50%); }
-.org-node__hover-btns--bottom { bottom: -16px; left: 50%; transform: translateX(-50%); }
-.org-node__hover-btns--right { right: -16px; top: 30px; }
+.org-node__hover-btns--bottom { bottom: -10px; left: 50%; transform: translateX(-50%); }
+.org-node__hover-btns--right { right: -10px; top: 20px; }
 
 .org-node__rename-input {
   background: var(--color-bg); border: 1px solid var(--color-accent);

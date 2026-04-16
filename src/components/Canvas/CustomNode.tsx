@@ -217,20 +217,21 @@ function OrgNodeComponent({ data }: NodeProps) {
             )}
           </>
         )}
-      </div>
 
-      {!isEditing && (
-        <>
-          {hasParent && (
-            <div className="org-node__hover-btns org-node__hover-btns--right">
-              <button className="org-node__hover-btn" onClick={handleAddSibling} title="Add sibling">+</button>
+        {/* Hover buttons — inside org-node so positioned relative to it */}
+        {!isEditing && (
+          <>
+            {hasParent && (
+              <div className="org-node__hover-btns org-node__hover-btns--right">
+                <button className="org-node__hover-btn" onClick={handleAddSibling} title="Add sibling">+</button>
+              </div>
+            )}
+            <div className="org-node__hover-btns org-node__hover-btns--bottom">
+              <button className="org-node__hover-btn" onClick={handleAddChild} title="Add child">+</button>
             </div>
-          )}
-          <div className="org-node__hover-btns org-node__hover-btns--bottom">
-            <button className="org-node__hover-btn" onClick={handleAddChild} title="Add child">+</button>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
