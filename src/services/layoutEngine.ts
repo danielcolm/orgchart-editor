@@ -113,7 +113,15 @@ export function computeLayout(
     g.setDefaultEdgeLabel(() => ({}));
     for (const id of allIds) g.setNode(id, { width: NODE_WIDTH, height: getHeight(id) });
 
-    const childrenByParent = new Map<string, OrgNode[]>();
+const childrenByParent = new Map<string, OrgNode[]>();
+    // The top-level childNodes are all siblings (passed together as a group)
+    const rootGroupKey = "__rootGroup__";
+    for (const child of childNodes) {
+      const list = childrenByParent.get(rootGroupKey) ?? [];
+      list.push(child);
+      childrenByParent.set(rootGroupKey, list);
+    }
+    // Inner parent-child relationships
     for (const id of allIds) {
       const node = nodeMap.get(id)!;
       if (node.parentId && idSet.has(node.parentId)) {
@@ -122,7 +130,8 @@ export function computeLayout(
         childrenByParent.set(node.parentId, list);
       }
     }
-    for (const [pid, children] of childrenByParent) {
+for (const [pid, children] of childrenByParent) {
+      if (pid === "__rootGroup__") continue;
       const sorted = [
         ...children.filter((n) => n.isStaff).sort((a, b) => a.order - b.order),
         ...children.filter((n) => !n.isStaff).sort((a, b) => a.order - b.order),
