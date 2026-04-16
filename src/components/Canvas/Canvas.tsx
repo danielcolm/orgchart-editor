@@ -88,7 +88,7 @@ function CanvasInner() {
         isSelected: selectedNodeId === node.id,
         nodeId: node.id, translationStatus: status,
         isCollapsed, hiddenCount, tagColors,
-        isVertical: layoutMap.get(node.id)?.isVertical ?? right,
+        isVertical: layoutMap.get(node.id)?.isVertical ?? false,
         nodeWidth: layoutMap.get(node.id)?.width ?? 180,
       };
 
@@ -101,7 +101,7 @@ function CanvasInner() {
 
   const rfEdges: Edge[] = useMemo(() => {
     const visibleIds = new Set(visibleNodes.map((n) => n.id));
-    const parentEdges: Edge[] = visibleNodes
+   const parentEdges: Edge[] = visibleNodes
       .filter((n) => n.parentId && visibleIds.has(n.parentId))
       .map((n) => {
         const isVertical = layoutMap.get(n.id)?.isVertical ?? false;
