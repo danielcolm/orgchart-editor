@@ -36,6 +36,17 @@ function CanvasInner() {
   const { fitView } = useReactFlow();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragPositions, setDragPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [nodeHeights, setNodeHeights] = useState<Map<string, number>>(new Map());
+
+  const reportHeight = useCallback((id: string, height: number) => {
+    setNodeHeights((prev) => {
+      const current = prev.get(id);
+      if (current !== undefined && Math.abs(current - height) < 1) return prev;
+      const next = new Map(prev);
+      next.set(id, height);
+      return next;
+    });
+  }, []);
 
   const dominantLang = settings.dominantLanguage;
 
@@ -44,7 +55,7 @@ function CanvasInner() {
     [allNodes, collapsedNodes, focusNodeId, focusWithParents, collapseAfterLevel]
   );
 
-  const layoutResult = useMemo(() => computeLayout(visibleNodes), [visibleNodes]);
+  const layoutResult = useMemo(() => computeLayout(visibleNodes, nodeHeights), [visibleNodes, nodeHeights]);
   const layoutMap = useMemo(
     () => new Map(layoutResult.positions.map((p) => [p.id, p])),
     [layoutResult]
@@ -90,6 +101,7 @@ function CanvasInner() {
         isCollapsed, hiddenCount, tagColors,
         isVertical: layoutMap.get(node.id)?.isVertical ?? false,
         nodeWidth: layoutMap.get(node.id)?.width ?? 180,
+        reportHeight,
       };
 
       return {
@@ -101,7 +113,7 @@ function CanvasInner() {
 
   const rfEdges: Edge[] = useMemo(() => {
     const visibleIds = new Set(visibleNodes.map((n) => n.id));
-   const parentEdges: Edge[] = visibleNodes
+    const parentEdges: Edge[] = visibleNodes
       .filter((n) => n.parentId && visibleIds.has(n.parentId))
       .map((n) => {
         const isVertical = layoutMap.get(n.id)?.isVertical ?? false;

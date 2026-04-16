@@ -17,6 +17,7 @@ export interface OrgNodeData {
   tagColors: string[];
   isVertical: boolean;
   nodeWidth: number;
+  reportHeight: (id: string, height: number) => void;
   [key: string]: unknown;
 }
 
@@ -30,6 +31,7 @@ function OrgNodeComponent({ data }: NodeProps) {
   const [editValue, setEditValue] = useState(d.label);
   const inputRef = useRef<HTMLInputElement>(null);
   const committedRef = useRef(false);
+  const nodeRef = useRef<HTMLDivElement>(null);
 
   const nodes = useStore((s) => s.nodes);
   const setNodes = useStore((s) => s.setNodes);
@@ -38,6 +40,23 @@ function OrgNodeComponent({ data }: NodeProps) {
   const settings = useStore((s) => s.settings);
   const showContextMenu = useStore((s) => s.showContextMenu);
   const takeSnapshot = useStore((s) => s.takeSnapshot);
+
+  // Measure node height and report back to Canvas for layout
+  useEffect(() => {
+    if (!nodeRef.current) return;
+    const el = nodeRef.current;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
+        // Add padding to account for borders
+        d.reportHeight(d.nodeId, Math.ceil(height) + 2);
+      }
+    });
+    observer.observe(el);
+    // Initial measurement
+    d.reportHeight(d.nodeId, Math.ceil(el.getBoundingClientRect().height) + 2);
+    return () => observer.disconnect();
+  }, [d.nodeId, d.reportHeight]);
 
   useEffect(() => {
     if (isEditing) {
@@ -151,7 +170,7 @@ function OrgNodeComponent({ data }: NodeProps) {
 
   return (
     <div className="org-node-wrapper">
-      <div className={classes} style={{ width: d.nodeWidth }} onDoubleClick={(e) => { e.stopPropagation(); setEditingNodeId(d.nodeId); }} onContextMenu={handleContextMenu}>
+      <div ref={nodeRef} className={classes} style={{ width: d.nodeWidth }} onDoubleClick={(e) => { e.stopPropagation(); setEditingNodeId(d.nodeId); }} onContextMenu={handleContextMenu}>
         <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
         {d.isVertical && <Handle type="target" position={Position.Left} id="left" style={{ opacity: 0 }} />}
         <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />

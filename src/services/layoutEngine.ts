@@ -28,10 +28,17 @@ interface SubtreeResult {
   height: number;
 }
 
-export function computeLayout(nodes: OrgNode[]): LayoutResult {
+export function computeLayout(
+  nodes: OrgNode[],
+  nodeHeights?: Map<string, number>
+): LayoutResult {
   if (nodes.length === 0) return { positions: [] };
 
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  function getHeight(nodeId: string): number {
+    return nodeHeights?.get(nodeId) ?? NODE_HEIGHT;
+  }
 
   function getStaffChildren(parentId: string): OrgNode[] {
     return nodes.filter((n) => n.parentId === parentId && n.isStaff).sort((a, b) => a.order - b.order);
@@ -57,41 +64,6 @@ export function computeLayout(nodes: OrgNode[]): LayoutResult {
     return which === "staff" ? node.staffLayout : node.childrenLayout;
   }
 
-function estimateNodeHeight(node: OrgNode): number {
-    // Vertical nodes: 160px wide, ~22 chars per line at 13px font
-    // CSS: padding 6px top + 6px bottom = 12px
-    const VERT_PADDING = 12;
-    const NODE_NAME_LINE = 19;   // 13px * 1.4
-    const SMALL_LINE = 16;        // 11px * 1.5
-    const CHARS_PER_LINE = 22;
-
-    let h = VERT_PADDING;
-
-    // Node name (required). Consider wrapping.
-    const anyTranslation = Object.values(node.translations)[0];
-    const nameText = anyTranslation?.name ?? "";
-    const nameLines = Math.max(1, Math.ceil(nameText.length / CHARS_PER_LINE));
-    h += nameLines * NODE_NAME_LINE;
-
-    // Person names (joined with ", ")
-    const peopleCount = node.assignedPeople?.length ?? 0;
-    if (peopleCount > 0) {
-      // Rough average: 15 chars per person name + 2 for separator
-      const totalChars = peopleCount * 17;
-      const personLines = Math.max(1, Math.ceil(totalChars / CHARS_PER_LINE));
-      h += personLines * SMALL_LINE + 2; // +2 for margin-top
-    }
-
-    // Description
-    if (anyTranslation?.description) {
-      const descLines = Math.ceil(anyTranslation.description.length / CHARS_PER_LINE);
-      h += descLines * SMALL_LINE + 2;
-    }
-
-    // Minimum
-    return Math.max(h, 50);
-  }
-
   function layoutVerticalGroup(childNodes: OrgNode[]): SubtreeResult {
     if (childNodes.length === 0) return { positions: [], width: 0, height: 0 };
 
@@ -100,7 +72,7 @@ function estimateNodeHeight(node: OrgNode): number {
     let maxWidth = VERT_NODE_WIDTH;
 
     for (const child of childNodes) {
-      const h = estimateNodeHeight(child);
+      const h = getHeight(child.id);
       allPositions.push({ id: child.id, x: 0, y: currentY, width: VERT_NODE_WIDTH, isVertical: true });
       currentY += h + VERT_ROW_GAP;
 
@@ -139,7 +111,7 @@ function estimateNodeHeight(node: OrgNode): number {
     const g = new dagre.graphlib.Graph();
     g.setGraph({ rankdir: "TB", ranksep: RANK_SEP, nodesep: NODE_SEP, marginx: 0, marginy: 0 });
     g.setDefaultEdgeLabel(() => ({}));
-    for (const id of allIds) g.setNode(id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    for (const id of allIds) g.setNode(id, { width: NODE_WIDTH, height: getHeight(id) });
 
     const childrenByParent = new Map<string, OrgNode[]>();
     for (const id of allIds) {
@@ -162,7 +134,8 @@ function estimateNodeHeight(node: OrgNode): number {
 
     const positions: LayoutPosition[] = allIds.map((id) => {
       const pos = g.node(id);
-      return { id, x: pos.x - NODE_WIDTH / 2, y: pos.y - NODE_HEIGHT / 2, width: NODE_WIDTH, isVertical: false };
+      const h = getHeight(id);
+      return { id, x: pos.x - NODE_WIDTH / 2, y: pos.y - h / 2, width: NODE_WIDTH, isVertical: false };
     });
 
     const posById = new Map(positions.map((p) => [p.id, p]));
@@ -214,7 +187,7 @@ function estimateNodeHeight(node: OrgNode): number {
       if (!parentPos || vertResult.positions.length === 0) continue;
 
       const vOffsetX = parentPos.x;
-      const vOffsetY = parentPos.y + NODE_HEIGHT + RANK_SEP;
+      const vOffsetY = parentPos.y + getHeight(id) + RANK_SEP;
       const horizDescIds = getDescIds(id);
       const pushDown = vertResult.height + VERT_ROW_GAP;
       for (const did of horizDescIds) {
@@ -232,7 +205,7 @@ function estimateNodeHeight(node: OrgNode): number {
       minX = Math.min(minX, p.x);
       maxX = Math.max(maxX, p.x + (p.width ?? NODE_WIDTH));
       minY = Math.min(minY, p.y);
-      maxY = Math.max(maxY, p.y + NODE_HEIGHT);
+      maxY = Math.max(maxY, p.y + getHeight(p.id));
     }
     return { positions, width: positions.length > 0 ? maxX - minX : 0, height: positions.length > 0 ? maxY - minY : 0 };
   }
@@ -278,7 +251,7 @@ function estimateNodeHeight(node: OrgNode): number {
     let w = 0, h = 0;
     if (allPositions.length > 0) {
       w = Math.max(...allPositions.map((p) => p.x + (p.width ?? NODE_WIDTH)));
-      h = Math.max(...allPositions.map((p) => p.y + NODE_HEIGHT));
+      h = Math.max(...allPositions.map((p) => p.y + getHeight(p.id)));
     }
     return { positions: allPositions, width: w, height: h };
   }
@@ -290,7 +263,7 @@ function estimateNodeHeight(node: OrgNode): number {
   const rootPos: LayoutPosition = { id: root.id, x: 0, y: 40, width: NODE_WIDTH, isVertical: false };
   const subtree = layoutNodeChildren(root.id);
   const subtreeOffsetX = rootPos.x + NODE_WIDTH / 2 - subtree.width / 2;
-  const subtreeOffsetY = rootPos.y + NODE_HEIGHT + RANK_SEP;
+  const subtreeOffsetY = rootPos.y + getHeight(root.id) + RANK_SEP;
 
   const allPositions: LayoutPosition[] = [rootPos];
   for (const p of subtree.positions) {
