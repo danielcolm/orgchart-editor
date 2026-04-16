@@ -57,13 +57,16 @@ export function computeLayout(nodes: OrgNode[]): LayoutResult {
     return which === "staff" ? node.staffLayout : node.childrenLayout;
   }
 
-  function estimateNodeHeight(node: OrgNode): number {
+ function estimateNodeHeight(node: OrgNode): number {
     let h = NODE_HEIGHT;
-    // Person names (assume most languages, count people)
     const peopleCount = node.assignedPeople?.length ?? 0;
-    if (peopleCount > 0) h += 16;
-    // If description is set, roughly estimate 16px per 20 chars (crude but works)
-    // Use the dominant/first translation
+    if (peopleCount > 0) {
+      // People names wrap. Estimate ~18 chars per name + ", " separator = 20.
+      // Vertical node ~22 chars per line. Calculate total lines needed.
+      const totalChars = peopleCount * 20;
+      const lines = Math.max(1, Math.ceil(totalChars / 22));
+      h += lines * 16;
+    }
     const anyTranslation = Object.values(node.translations)[0];
     if (anyTranslation?.description) {
       const descLines = Math.ceil((anyTranslation.description.length ?? 0) / 22);
