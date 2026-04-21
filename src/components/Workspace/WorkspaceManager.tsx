@@ -59,32 +59,51 @@ export function WorkspaceManager() {
 
   async function handleDuplicate(id: string) {
     const source = await db.fetchProject(id);
-    const nodes = await db.fetchNodes(id);
-    const relations = await db.fetchRelations(id);
-    const people = await db.fetchPeople(id);
+    const srcNodes = await db.fetchNodes(id);
+    const srcRelations = await db.fetchRelations(id);
+    const srcPeople = await db.fetchPeople(id);
 
     const newProject = await db.createProject(`${source.name} (copy)`, source.settings);
 
     const idMap = new Map<string, string>();
-    for (const p of people) {
+
+    // Duplicate people
+    for (const p of srcPeople) {
       const newUid = crypto.randomUUID();
       idMap.set(p.uid, newUid);
       await db.upsertPerson({ ...p, uid: newUid, projectId: newProject.id });
     }
-    for (const n of nodes) {
-      const newId = crypto.randomUUID();
-      idMap.set(n.id, newId);
+
+    // Map all node IDs first
+    for (const n of srcNodes) {
+      idMap.set(n.id, crypto.randomUUID());
     }
-    for (const n of nodes) {
+
+    // Sort nodes by depth (root first) so parent always exists before child
+    function getDepth(nodeId: string): number {
+      let depth = 0;
+      let current = srcNodes.find((n) => n.id === nodeId);
+      while (current?.parentId) {
+        depth++;
+        current = srcNodes.find((n) => n.id === current!.parentId);
+      }
+      return depth;
+    }
+    const sortedNodes = [...srcNodes].sort((a, b) => getDepth(a.id) - getDepth(b.id));
+
+    // Insert nodes in order
+    for (const n of sortedNodes) {
       await db.upsertNode({
         ...n,
         id: idMap.get(n.id)!,
         projectId: newProject.id,
         parentId: n.parentId ? idMap.get(n.parentId) ?? null : null,
-        assignedPeople: n.assignedPeople.map((uid) => idMap.get(uid) ?? uid),
+        assignedPeople: (n.assignedPeople ?? []).map((uid) => idMap.get(uid) ?? uid),
       });
     }
-    for (const r of relations) {
+
+    // Duplicate relations
+    for (const r of srcRelations) {
       await db.upsertRelation({
         ...r,
         id: crypto.randomUUID(),
