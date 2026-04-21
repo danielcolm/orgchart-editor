@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useStore } from "@/store";
 import { wouldCreateCycle } from "@/utils/cycleDetector";
+import * as db from "@/services/dbService";
 
 export function NodeContextMenu() {
   const ctx = useStore((s) => s.contextMenu);
@@ -138,21 +139,37 @@ export function NodeContextMenu() {
       <div className="context-menu__separator" />
 
       {!isRoot && <>
-        <button className="context-menu__item context-menu__item--danger" onClick={() => act(() => {
-          const updated = nodes.filter((n) => n.id !== ctx.nodeId).map((n) => n.parentId === ctx.nodeId ? { ...n, parentId: node.parentId } : n);
+        <button className="context-menu__item context-menu__item--danger" onClick={() => act(async () => {
+          const removedId = ctx.nodeId!;
+          const updated = nodes.filter((n) => n.id !== removedId).map((n) => n.parentId === removedId ? { ...n, parentId: node.parentId } : n);
+          const removedRelations = relations.filter((r) => r.sourceId === removedId || r.targetId === removedId);
           setNodes(updated);
-          setRelations(relations.filter((r) => r.sourceId !== ctx.nodeId && r.targetId !== ctx.nodeId));
-          syncNodes();
+          setRelations(relations.filter((r) => r.sourceId !== removedId && r.targetId !== removedId));
+          // Sync to Supabase: delete removed node, update reparented children, delete orphan relations
+          await db.deleteNode(removedId);
+          for (const child of updated.filter((n) => n.parentId === node.parentId)) {
+            await db.upsertNode(child);
+          }
+          for (const rel of removedRelations) {
+            await db.deleteRelation(rel.id);
+          }
         }, "Delete (promote)")}>Delete (promote children)</button>
-        <button className="context-menu__item context-menu__item--danger" onClick={() => act(() => {
+        <button className="context-menu__item context-menu__item--danger" onClick={() => act(async () => {
           const toRemove = new Set<string>();
           const queue = [ctx.nodeId!];
           while (queue.length > 0) { const id = queue.shift()!; toRemove.add(id); nodes.filter((n) => n.parentId === id).forEach((n) => queue.push(n.id)); }
           const updated = nodes.filter((n) => !toRemove.has(n.id));
-          setNodes(updated);
           const ids = new Set(updated.map((n) => n.id));
+          const removedRelations = relations.filter((r) => !ids.has(r.sourceId) || !ids.has(r.targetId));
+          setNodes(updated);
           setRelations(relations.filter((r) => ids.has(r.sourceId) && ids.has(r.targetId)));
-          syncNodes();
+          // Sync to Supabase: delete all removed nodes and orphan relations
+          for (const id of toRemove) {
+            await db.deleteNode(id);
+          }
+          for (const rel of removedRelations) {
+            await db.deleteRelation(rel.id);
+          }
         }, "Delete subtree")}>Delete subtree</button>
       </>}
     </div>
