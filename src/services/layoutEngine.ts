@@ -113,11 +113,31 @@ export function computeLayout(
     const allIds = collectHoriz(childNodes.map((n) => n.id));
     const idSet = new Set(allIds);
 
+    // Pre-calculate effective width for each node:
+    // If a node has vertical children, its effective width = max(NODE_WIDTH, vertical subtree width + indent)
+    // This tells dagre to reserve enough horizontal space
+    const effectiveWidths = new Map<string, number>();
+    for (const id of allIds) {
+      let w = NODE_WIDTH;
+      const sL = getEffectiveLayout(id, "staff");
+      const cL = getEffectiveLayout(id, "children");
+      const vertStaff = sL === "vertical" ? getStaffChildren(id) : [];
+      const vertChildren = cL === "vertical" ? getRegularChildren(id) : [];
+
+      if (vertStaff.length > 0 || vertChildren.length > 0) {
+        // Calculate the width of vertical sub-groups
+        const vertNodes = [...vertStaff, ...vertChildren];
+        const vertResult = layoutVerticalGroup(vertNodes);
+        w = Math.max(w, vertResult.width + VERT_INDENT + 20); // +20 for breathing room
+      }
+      effectiveWidths.set(id, w);
+    }
+
     // Build dagre graph
     const g = new dagre.graphlib.Graph();
     g.setGraph({ rankdir: "TB", ranksep: RANK_SEP, nodesep: NODE_SEP, marginx: 0, marginy: 0 });
     g.setDefaultEdgeLabel(() => ({}));
-    for (const id of allIds) g.setNode(id, { width: NODE_WIDTH, height: getHeight(id) });
+    for (const id of allIds) g.setNode(id, { width: effectiveWidths.get(id) ?? NODE_WIDTH, height: getHeight(id) });
 
     // Build parent-child map, including a virtual root group for the top-level siblings
     const childrenByParent = new Map<string, OrgNode[]>();
@@ -150,12 +170,21 @@ export function computeLayout(
 
     dagre.layout(g);
 
-    // Extract positions
+    // Extract positions — node visual x is centered within its effective width space
     const positions: LayoutPosition[] = allIds.map((id) => {
       const pos = g.node(id);
       const h = getHeight(id);
+      const effW = effectiveWidths.get(id) ?? NODE_WIDTH;
+      // Center the visual node within the dagre-allocated space
       return { id, x: pos.x - NODE_WIDTH / 2, y: pos.y - h / 2, width: NODE_WIDTH, isVertical: false };
     });
+
+    // Store dagre allocated space for vertical child positioning
+    const dagreCenter = new Map<string, number>();
+    for (const id of allIds) {
+      const pos = g.node(id);
+      dagreCenter.set(id, pos.x);
+    }
 
     const posById = new Map(positions.map((p) => [p.id, p]));
 
@@ -238,7 +267,7 @@ export function computeLayout(
 
       vertAttachments.push({
         parentId: id,
-        vOffsetX: parentPos.x,
+        vOffsetX: parentPos.x,  // Left edge of visual node — vertical children align here
         vOffsetY: parentPos.y + getHeight(id) + RANK_SEP,
         result: vertResult,
         horizDescIds: getDescIds(id),
