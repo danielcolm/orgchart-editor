@@ -17,7 +17,7 @@ export interface OrgNodeData {
   tagColors: string[];
   isVertical: boolean;
   nodeWidth: number;
-  reportHeight: (id: string, height: number) => void;
+  reportSize: (id: string, width: number, height: number) => void;
   [key: string]: unknown;
 }
 
@@ -41,22 +41,22 @@ function OrgNodeComponent({ data }: NodeProps) {
   const showContextMenu = useStore((s) => s.showContextMenu);
   const takeSnapshot = useStore((s) => s.takeSnapshot);
 
-  // Measure node height and report back to Canvas for layout
+  // Measure node size and report back to Canvas for layout
   useEffect(() => {
     if (!nodeRef.current) return;
     const el = nodeRef.current;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
+        const width = entry.contentRect.width;
         const height = entry.contentRect.height;
-        // Add padding to account for borders
-        d.reportHeight(d.nodeId, Math.ceil(height) + 2);
+        d.reportSize(d.nodeId, Math.ceil(width) + 2, Math.ceil(height) + 2);
       }
     });
     observer.observe(el);
-    // Initial measurement
-    d.reportHeight(d.nodeId, Math.ceil(el.getBoundingClientRect().height) + 2);
+    const rect = el.getBoundingClientRect();
+    d.reportSize(d.nodeId, Math.ceil(rect.width) + 2, Math.ceil(rect.height) + 2);
     return () => observer.disconnect();
-  }, [d.nodeId, d.reportHeight]);
+  }, [d.nodeId, d.reportSize]);
 
   useEffect(() => {
     if (isEditing) {
