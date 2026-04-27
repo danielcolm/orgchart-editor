@@ -91,6 +91,46 @@ export function NodeContextMenu() {
         syncNodes();
       }, "Toggle staff")}>{node.isStaff ? "Make regular child" : "Make staff"}</button>}
 
+      <button className="context-menu__item" onClick={() => {
+        const otherNodes = nodes.filter((n) => n.id !== ctx.nodeId);
+        const search = prompt("Connect to (search by name):")?.trim().toLowerCase();
+        if (!search) { hide(); return; }
+        const matches = otherNodes.filter((n) => {
+          const t = n.translations[settings.languages[0]?.code];
+          return (t?.name ?? n.id).toLowerCase().includes(search);
+        });
+        if (matches.length === 0) { alert(`No match for "${search}"`); hide(); return; }
+        let target = matches[0];
+        if (matches.length > 1) {
+          const names = matches.map((n, i) => {
+            const t = n.translations[settings.languages[0]?.code];
+            return `${i + 1}. ${t?.name ?? n.id}`;
+          }).join("\n");
+          const choice = prompt(`Multiple matches:\n${names}\n\nEnter number:`);
+          if (!choice) { hide(); return; }
+          const idx = parseInt(choice) - 1;
+          if (idx < 0 || idx >= matches.length) { hide(); return; }
+          target = matches[idx];
+        }
+        if (relations.some((r) => r.sourceId === ctx.nodeId && r.targetId === target.id)) {
+          alert("Relation already exists"); hide(); return;
+        }
+        takeSnapshot("Add relation");
+        const now = Date.now();
+        const translations: Record<string, unknown> = {};
+        for (const lang of settings.languages) {
+          translations[lang.code] = { label: "", updatedAt: now };
+        }
+        setRelations([...relations, {
+          id: crypto.randomUUID(),
+          projectId: nodes[0]?.projectId ?? "",
+          sourceId: ctx.nodeId!,
+          targetId: target.id,
+          translations: translations as any,
+        }]);
+        hide();
+      }}>Add relation</button>
+
       {nodeRelations.length > 0 && <>
         <div className="context-menu__separator" />
         {nodeRelations.map((rel) => {

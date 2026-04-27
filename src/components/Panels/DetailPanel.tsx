@@ -94,14 +94,31 @@ export function DetailPanel() {
     if (!node) return;
     const unassigned = people.filter((p) => !node.assignedPeople.includes(p.uid));
     if (unassigned.length === 0) { alert("No unassigned people available. Add a new person instead."); return; }
-    const names = unassigned.map((p, i) => `${i + 1}. ${p.firstName} ${p.lastName}`).join("\n");
-    const choice = prompt(`Assign person:\n${names}\n\nEnter number:`);
+    const search = prompt("Search person by name:")?.trim().toLowerCase();
+    if (!search) return;
+    const matches = unassigned.filter((p) =>
+      `${p.firstName} ${p.lastName}`.toLowerCase().includes(search)
+    );
+    if (matches.length === 0) { alert(`No match for "${search}"`); return; }
+    if (matches.length === 1) {
+      // Auto-assign if only one match
+      takeSnapshot("Assign person");
+      const updated = nodes.map((n) =>
+        n.id === node.id ? { ...n, assignedPeople: [...n.assignedPeople, matches[0].uid] } : n
+      );
+      setNodes(updated);
+      syncNodes();
+      return;
+    }
+    // Multiple matches — show numbered list
+    const names = matches.map((p, i) => `${i + 1}. ${p.firstName} ${p.lastName}`).join("\n");
+    const choice = prompt(`Multiple matches:\n${names}\n\nEnter number:`);
     if (!choice) return;
     const idx = parseInt(choice) - 1;
-    if (idx < 0 || idx >= unassigned.length) return;
+    if (idx < 0 || idx >= matches.length) return;
     takeSnapshot("Assign person");
     const updated = nodes.map((n) =>
-      n.id === node.id ? { ...n, assignedPeople: [...n.assignedPeople, unassigned[idx].uid] } : n
+      n.id === node.id ? { ...n, assignedPeople: [...n.assignedPeople, matches[idx].uid] } : n
     );
     setNodes(updated);
     syncNodes();

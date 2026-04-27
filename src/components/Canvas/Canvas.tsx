@@ -37,21 +37,13 @@ function CanvasInner() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragPositions, setDragPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [nodeHeights, setNodeHeights] = useState<Map<string, number>>(new Map());
-  const [nodeWidths, setNodeWidths] = useState<Map<string, number>>(new Map());
 
-  const reportSize = useCallback((id: string, width: number, height: number) => {
+  const reportSize = useCallback((id: string, _width: number, height: number) => {
     setNodeHeights((prev) => {
       const current = prev.get(id);
       if (current !== undefined && Math.abs(current - height) < 1) return prev;
       const next = new Map(prev);
       next.set(id, height);
-      return next;
-    });
-    setNodeWidths((prev) => {
-      const current = prev.get(id);
-      if (current !== undefined && Math.abs(current - width) < 1) return prev;
-      const next = new Map(prev);
-      next.set(id, width);
       return next;
     });
   }, []);
@@ -63,7 +55,7 @@ function CanvasInner() {
     [allNodes, collapsedNodes, focusNodeId, focusWithParents, collapseAfterLevel]
   );
 
-  const layoutResult = useMemo(() => computeLayout(visibleNodes, nodeHeights, nodeWidths), [visibleNodes, nodeHeights, nodeWidths]);
+  const layoutResult = useMemo(() => computeLayout(visibleNodes, nodeHeights), [visibleNodes, nodeHeights]);
   const layoutMap = useMemo(
     () => new Map(layoutResult.positions.map((p) => [p.id, p])),
     [layoutResult]

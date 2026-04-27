@@ -30,8 +30,7 @@ interface SubtreeResult {
 
 export function computeLayout(
   nodes: OrgNode[],
-  nodeHeights?: Map<string, number>,
-  nodeWidths?: Map<string, number>
+  nodeHeights?: Map<string, number>
 ): LayoutResult {
   if (nodes.length === 0) return { positions: [] };
 
@@ -39,10 +38,6 @@ export function computeLayout(
 
   function getHeight(nodeId: string): number {
     return nodeHeights?.get(nodeId) ?? NODE_HEIGHT;
-  }
-
-  function getWidth(nodeId: string): number {
-    return nodeWidths?.get(nodeId) ?? NODE_WIDTH;
   }
 
   function getStaffChildren(parentId: string): OrgNode[] {
@@ -76,13 +71,12 @@ export function computeLayout(
 
     const allPositions: LayoutPosition[] = [];
     let currentY = 0;
-    let maxWidth = 0;
+    let maxWidth = VERT_NODE_WIDTH;
 
     for (const child of childNodes) {
       const h = getHeight(child.id);
-      const w = getWidth(child.id);
-      allPositions.push({ id: child.id, x: 0, y: currentY, width: w, isVertical: true });
-      maxWidth = Math.max(maxWidth, w);
+      allPositions.push({ id: child.id, x: 0, y: currentY, width: VERT_NODE_WIDTH, isVertical: true });
+      maxWidth = Math.max(maxWidth, VERT_NODE_WIDTH);
       currentY += h + VERT_ROW_GAP;
 
       const sub = layoutNodeChildren(child.id);
@@ -121,10 +115,10 @@ export function computeLayout(
     const idSet = new Set(allIds);
 
     // Pre-calculate effective width for each node:
-    // If a node has vertical children, its effective width = max(nodeWidth, vertical subtree width + indent)
+    // If a node has vertical children, its effective width = max(NODE_WIDTH, vertical subtree width + margin)
     const effectiveWidths = new Map<string, number>();
     for (const id of allIds) {
-      let w = getWidth(id);
+      let w = NODE_WIDTH;
       const sL = getEffectiveLayout(id, "staff");
       const cL = getEffectiveLayout(id, "children");
       const vertStaff = sL === "vertical" ? getStaffChildren(id) : [];
@@ -133,7 +127,7 @@ export function computeLayout(
       if (vertStaff.length > 0 || vertChildren.length > 0) {
         const vertNodes = [...vertStaff, ...vertChildren];
         const vertResult = layoutVerticalGroup(vertNodes);
-        w = Math.max(w, vertResult.width + VERT_INDENT + 20);
+        w = Math.max(w, vertResult.width + VERT_INDENT + 40);
       }
       effectiveWidths.set(id, w);
     }
@@ -142,7 +136,7 @@ export function computeLayout(
     const g = new dagre.graphlib.Graph();
     g.setGraph({ rankdir: "TB", ranksep: RANK_SEP, nodesep: NODE_SEP, marginx: 0, marginy: 0 });
     g.setDefaultEdgeLabel(() => ({}));
-    for (const id of allIds) g.setNode(id, { width: effectiveWidths.get(id) ?? getWidth(id), height: getHeight(id) });
+    for (const id of allIds) g.setNode(id, { width: effectiveWidths.get(id) ?? NODE_WIDTH, height: getHeight(id) });
 
     // Build parent-child map, including a virtual root group for the top-level siblings
     const childrenByParent = new Map<string, OrgNode[]>();
@@ -175,20 +169,12 @@ export function computeLayout(
 
     dagre.layout(g);
 
-    // Extract positions — node visual x is centered within its effective width space
+    // Extract positions
     const positions: LayoutPosition[] = allIds.map((id) => {
       const pos = g.node(id);
       const h = getHeight(id);
-      const w = getWidth(id);
-      return { id, x: pos.x - w / 2, y: pos.y - h / 2, width: w, isVertical: false };
+      return { id, x: pos.x - NODE_WIDTH / 2, y: pos.y - h / 2, width: NODE_WIDTH, isVertical: false };
     });
-
-    // Store dagre allocated space for vertical child positioning
-    const dagreCenter = new Map<string, number>();
-    for (const id of allIds) {
-      const pos = g.node(id);
-      dagreCenter.set(id, pos.x);
-    }
 
     const posById = new Map(positions.map((p) => [p.id, p]));
 
@@ -376,10 +362,9 @@ export function computeLayout(
   if (roots.length === 0) return { positions: [] };
   const root = roots[0];
 
-  const rootW = getWidth(root.id);
-  const rootPos: LayoutPosition = { id: root.id, x: 0, y: 40, width: rootW, isVertical: false };
+  const rootPos: LayoutPosition = { id: root.id, x: 0, y: 40, width: NODE_WIDTH, isVertical: false };
   const subtree = layoutNodeChildren(root.id);
-  const subtreeOffsetX = rootPos.x + rootW / 2 - subtree.width / 2;
+  const subtreeOffsetX = rootPos.x + NODE_WIDTH / 2 - subtree.width / 2;
   const subtreeOffsetY = rootPos.y + getHeight(root.id) + RANK_SEP;
 
   const allPositions: LayoutPosition[] = [rootPos];
