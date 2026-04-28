@@ -4,6 +4,7 @@ import { useStore } from "@/store";
 import type { ViewMode } from "@/types/ui";
 import { exportPng, exportPdf } from "@/services/exportService";
 import { exportToExcel } from "@/services/excelService";
+import { exportPptx } from "@/services/pptxService";
 import { ImportDialog } from "@/components/Dialogs/ImportDialog";
 
 export function Toolbar() {
@@ -58,6 +59,17 @@ export function Toolbar() {
     catch (err) { alert(`Excel export failed: ${err}`); }
   }
 
+  async function handleExportPptx() {
+    setShowExportMenu(false);
+    try {
+      await exportPptx(projectName, {
+        nodes, relations, people, settings, activeLanguage, showNames,
+      }, `${projectName}.pptx`);
+    } catch (err) {
+      alert(`PowerPoint export failed: ${err}`);
+    }
+  }
+
   return (
     <>
     <div style={S.bar}>
@@ -103,6 +115,7 @@ export function Toolbar() {
               <button style={S.dropItem} onClick={handleExportPng}>PNG Image</button>
               <button style={S.dropItem} onClick={handleExportPdf}>PDF Document</button>
               <button style={S.dropItem} onClick={handleExportExcel}>Excel (.xlsx)</button>
+              <button style={S.dropItem} onClick={handleExportPptx}>PowerPoint (.pptx)</button>
             </div>
           )}
         </div>
